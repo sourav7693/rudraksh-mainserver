@@ -1,0 +1,19 @@
+import mongoose from "mongoose";
+import dns from "dns";
+
+// dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
+export const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI!);
+    mongoose.set("strictPopulate", false);
+    console.log("MongoDB connected successfully");
+  } catch (error) {
+    console.log(error);
+    console.error(
+      "MongoDB connection failed:",
+      error instanceof Error ? error.message : "MongoDB connection failed:",
+    );
+    process.exit(1);
+  }
+};

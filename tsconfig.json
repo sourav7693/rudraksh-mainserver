@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "ESNext",           // ✅ Changed from nodenext
+    "rootDir": "src",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "strict": false,
+    "types": ["node"],
+    "moduleResolution": "bundler",  // ✅ Changed from NodeNext
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noUncheckedIndexedAccess": true,
+    // "exactOptionalPropertyTypes": true,
+    "allowSyntheticDefaultImports": true,  // ✅ Added
+    "noEmit": false,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+     "noImplicitAny": false,
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist"]
+}
