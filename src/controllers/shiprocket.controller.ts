@@ -5,7 +5,7 @@ import { assignAwbToShipment, createShiprocketOrder, getCheapestCourier } from "
 export const serviceabilityCheck = async (req : Request, res : Response) => {
   try {
     const {
-      pickup_postcode,
+      pickup_postcode = "700001",
       delivery_postcode,
       weight = 1, //kgs
       cod = 0,

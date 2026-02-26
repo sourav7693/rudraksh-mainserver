@@ -3,6 +3,8 @@ import type { OrderDoc } from "../models/Order";
 import { Pickup, type PickupDoc } from "../models/Pickup";
 import type { ProductDoc } from "../models/Product";
 import { shipmozoClient } from "./shipmozo.client";
+import { shiprocketClient } from "./shiprocket.client";
+import { getCheapestCourier } from "./shiprocket.service";
 
 export interface OrderPopulatedDoc extends Omit<
   OrderDoc,
@@ -18,7 +20,7 @@ export interface OrderPopulatedDoc extends Omit<
   }>;
 }
 
-export const pushOrderToShipmozo = async (
+export const createShiprocketOrder = async (
   order: any,
   address: {
     mobile: string;
@@ -40,53 +42,74 @@ export const pushOrderToShipmozo = async (
   /* ✅ PICKUP FROM PRODUCT */
   const pickup = await Pickup.findById(product.pickup);
 
-  if (!pickup?.shipmozoWarehouseId) {
-    throw new Error("Shipmozo warehouse ID missing in pickup");
+  if (!pickup?.pickup_id) {
+    throw new Error("Shiprocket warehouse ID missing in pickup");
   }
 
   const payload = {
     order_id: order.orderId,
     order_date: new Date().toISOString().split("T")[0],
+    pickup_location: pickup.pickup_location,
 
-    consignee_name: address.name ?? order.customer.name,
-    consignee_phone: address.mobile,
-    consignee_address_line_one: `${address.area}${
+    billing_customer_name:
+      address.name.trim().split(" ")[0] ??
+      order.customer.name.trim().split(" ")[0],
+    billing_last_name:
+      address.name.trim().split(" ")[1] ??
+      order.customer.name.trim().split(" ")[1],
+    billing_address: `${address.area}${
       address.landmark ? ", " + address.landmark : ""
     }`,
-    consignee_pin_code: Number(address.pin),
-    consignee_city: address.city,
-    consignee_state: address.state,
+    billing_pincode: Number(address.pin),
+    billing_city: address.city,
+    billing_state: address.state,
+    billing_phone: address.mobile,
+
+    shipping_is_billing: true,
 
     /* ✅ SINGLE PRODUCT */
-    product_detail: [
+    order_items: [
       {
         name: product.name,
-        quantity: order.quantity,
-        unit_price: product.price,
-        product_category: "Other",
-        discount: product.discount ?? 0,
-        hsn: product.productId,
+        sku: product.productId,
+        units: product.quantity,
+        selling_price: product.price,
       },
     ],
 
-    payment_type: order.paymentStatus === "Paid" ? "PREPAID" : "COD",
-    cod_amount: order.paymentStatus === "Paid" ? "" : order.orderValue,
+    payment_method: order.paymentStatus === "Paid" ? "Prepaid" : "cod",
+    sub_total: order.paymentStatus === "Paid" ? 0 : order.orderValue,
 
     weight: product.weight,
     length: product.dimensions[0].length,
-    width: product.dimensions[0].width,
+    breadth: product.dimensions[0].width,
     height: product.dimensions[0].height,
-
-    warehouse_id: pickup.shipmozoWarehouseId,
   };
 
-  const { data } = await shipmozoClient.post("/push-order", payload);
+     // Get Cheapest Courier
+      const courier = await getCheapestCourier({
+        pickup_postcode: pickup?.pin_code,
+        delivery_postcode: address.pin,
+        weight: product.weight,
+        cod: order.paymentStatus !== "Paid" ? 1 : 0,
+      });
 
-  console.log("🚚 Shipmozo push-order:", data);
+   const response = await shiprocketClient.post("/orders/create/adhoc", payload);
+  
+    const shipment_id = response.data?.shipment_id;
+    
+    console.log("🚚 Shiprocket push-order:", response.data);
 
-  if (data.result !== "1") {
-    throw new Error(data.data.error);
-  }
-
-  return data.data;
+    if (!shipment_id) {
+      throw new Error("Shipment ID not generated");
+    }
+  
+    return {
+      shiprocket: response.data,
+      courier: {
+        courier_name: courier.courier_name,
+        courier_id: courier.courier_company_id,
+        rate: courier.rate,
+      },
+    };
 };

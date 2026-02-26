@@ -12,6 +12,8 @@ import { Payment } from "../models/Payment";
 import { Product } from "../models/Product";
 import Mongoose from "mongoose";
 import axios from "axios";
+import { createShiprocketOrder } from "../services/shiprocket.pushOrder";
+import { assignAwbToShipment, getCheapestCourier } from "../services/shiprocket.service";
 
 const formatMobile = (mobile: string) => {
   const raw = mobile.replace(/\D/g, "");
@@ -164,7 +166,7 @@ export const verifyPaymentAndCreateOrder = async (
     const orders = [];
 
     for (const item of items) {
-      const orderId = await generateCustomId(Order, "orderId", "PPN-", {
+      const orderId = await generateCustomId(Order, "orderId", "GR-", {
         enable: true,
       });
 
@@ -596,30 +598,30 @@ export const updateOrder = async (req: Request, res: Response) => {
 
     const pickup = await Pickup.findById(pickupId);
 
-    const pickupCode = pickup?.pin;
+    const pickupCode = pickup?.pin_code;
 
     // 🚀 Shipmozo flow ONLY on Processing → Confirm
     if (status === "Confirmed") {
-      const shipmozo = await pushOrderToShipmozo(order, resolvedAddress);
+      const {shiprocket, courier} = await createShiprocketOrder(order, resolvedAddress);
 
-      console.log(shipmozo);
+      console.log(shiprocket);
 
       order.shipping = {
-        shipmozoOrderId: shipmozo.order_id,
+        shiprocketOrderId: shiprocket.order_id,
       };
 
-      const courier = await prepareCourierForOrder(
-        order,
-        resolvedAddress,
-        pickupCode || "",
-      );
+       const awbRes = await assignAwbToShipment({
+            shipment_id : shiprocket.shipment_id,
+            courier_id: courier.courier_id,
+          });
+          const awbData = awbRes.awb_details.response.data;
 
       order.shipping = {
         ...order.shipping,
-        courierId: courier.courierId,
-        courierName: courier.courierName,
-        awbNumber: courier.awbNumber,
-        trackingUrl: `https://shipping-api.com/app/api/v1/track-order?awb_number=${courier.awbNumber}`,
+        courierId: courier.courier_id,
+        courierName: courier.courier_name,
+        awbNumber: awbData.awb_code,
+        trackingUrl: `${process.env.SHIPROCKET_BASE_URL}/courier/track/awb/${awbData.awb_code}`,
         labelGenerated: false,
         currentStatus: "Shipped",
       };
