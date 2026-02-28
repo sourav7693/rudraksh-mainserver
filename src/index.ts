@@ -44,6 +44,8 @@ app.use(
       "http://localhost:3000",
       "http://localhost:5173",
       "https://ganpatirudraakshaam.com",
+      "https://www.ganpatirudraakshaam.com",
+      "https://reboots.ganpatirudraakshaam.com",
     ],
     credentials: true,
   }),
