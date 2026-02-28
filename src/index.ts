@@ -43,10 +43,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "http://localhost:5173",
-      "https://pripriyanursuryadminpanel.netlify.app",
-      "https://pripriyanursery.com",
-      "https://www.pripriyanursery.com",
-      "https://reboots.pripriyanursery.com",
+      "https://ganpatirudraakshaam.com",
     ],
     credentials: true,
   }),

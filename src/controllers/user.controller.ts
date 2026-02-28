@@ -72,9 +72,10 @@ export const loginUser = async (req: Request, res: Response) => {
   res
     .cookie("admin_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: SIXTY_DAYS,
+      domain: ".ganpatirudraakshaam.com",
     })
     .json({
       success: true,
@@ -173,10 +174,11 @@ export const verifyOtpForUser = async (req: Request, res: Response) => {
 
     res
       .cookie("admin_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        httpOnly: true,        
+        secure: true,
+        sameSite: "none",
         maxAge: SIXTY_DAYS,
+        domain: ".ganpatirudraakshaam.com",
       })
       .json({
         success: true,
@@ -199,12 +201,16 @@ export const verifyOtpForUser = async (req: Request, res: Response) => {
 export const logoutUser = (_: Request, res: Response) => {
   const isProd = process.env.NODE_ENV === "production";
 
- res.cookie("admin_token", "", {
-   httpOnly: true,
-   sameSite: isProd ? "none" : "lax",
-   secure: isProd,
-   expires: new Date(0),
- }).json({ success: true, message: "Logged out" });
+ res
+   .cookie("admin_token", "", {
+     httpOnly: true,     
+     secure: true,
+     sameSite: "none",
+     maxAge: SIXTY_DAYS,
+     domain: ".ganpatirudraakshaam.com",
+     expires: new Date(0),
+   })
+   .json({ success: true, message: "Logged out" });
 };
 
 export const getUsers = async (req: Request, res: Response) => {
