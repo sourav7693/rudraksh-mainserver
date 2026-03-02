@@ -125,7 +125,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
       .cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",      
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",      
         path: "/",
         maxAge: 60 * 24 * 60 * 60 * 1000,
       })
@@ -193,7 +193,7 @@ export const verifyOtpUpdateMobile = async (
       res.clearCookie("token", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",      
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         path: "/",
       });
 
