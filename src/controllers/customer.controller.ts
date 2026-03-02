@@ -89,59 +89,52 @@ export const verifyOtp = async (req: Request, res: Response) => {
     }
     // console.log("STOREd:", stored.otp, "otp", otp);
 
-    delete otpStore[formattedMobile];   
+    delete otpStore[formattedMobile];
 
-       let customer = await Customer.findOne({
-         mobile: formattedMobile,
-       }).populate("wishlist");
-       let isNewUser = false;
+    let customer = await Customer.findOne({
+      mobile: formattedMobile,
+    }).populate("wishlist");
+    let isNewUser = false;
 
-       if (!customer) {
-         isNewUser = true;
+    if (!customer) {
+      isNewUser = true;
 
-         const customerId = await generateCustomId(
-           Customer,
-           "customerId",
-           "CUS",
-         );
+      const customerId = await generateCustomId(Customer, "customerId", "CUS");
 
-         customer = await Customer.create({
-           customerId,
-           mobile: formattedMobile,
-           status: true,
-           cart: [],
-           wishlist: [],
-           recentlyViewed: [],
-         });
-         await axios.post("https://web.wabridge.com/api/createmessage", {
-           "auth-key": process.env.WA_AUTH_KEY,
-           "app-key": process.env.WA_APP_KEY,
-           destination_number: formattedMobile,
-           template_id: "25174207942250801",
-           device_id: process.env.WA_DEVICE_ID,
-           language: "en",
-         });
-       } else if (!customer.status) {
-         return res.status(403).json({ message: "Account disabled" });
-       }
-       const token = generateToken(customer._id.toString(), "customer");
-       res.cookie("token", token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  domain:
-    process.env.NODE_ENV === "production"
-      ? ".ganpatirudraakshaam.com"
-      : undefined,
-  path: "/",
-  maxAge: 60 * 24 * 60 * 60 * 1000,
-}).json({
-           success: true,
-           isNewUser,
-           message: isNewUser ? "Signup successful" : "Login successful",
-           customer,
-         });
-    
+      customer = await Customer.create({
+        customerId,
+        mobile: formattedMobile,
+        status: true,
+        cart: [],
+        wishlist: [],
+        recentlyViewed: [],
+      });
+      await axios.post("https://web.wabridge.com/api/createmessage", {
+        "auth-key": process.env.WA_AUTH_KEY,
+        "app-key": process.env.WA_APP_KEY,
+        destination_number: formattedMobile,
+        template_id: "25174207942250801",
+        device_id: process.env.WA_DEVICE_ID,
+        language: "en",
+      });
+    } else if (!customer.status) {
+      return res.status(403).json({ message: "Account disabled" });
+    }
+    const token = generateToken(customer._id.toString(), "customer");
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",      
+        path: "/",
+        maxAge: 60 * 24 * 60 * 60 * 1000,
+      })
+      .json({
+        success: true,
+        isNewUser,
+        message: isNewUser ? "Signup successful" : "Login successful",
+        customer,
+      });
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -150,7 +143,10 @@ export const verifyOtp = async (req: Request, res: Response) => {
   }
 };
 
-export const verifyOtpUpdateMobile = async (req: CustomerAuthRequest, res: Response) => {
+export const verifyOtpUpdateMobile = async (
+  req: CustomerAuthRequest,
+  res: Response,
+) => {
   try {
     const { mobile, otp, mode } = req.body;
 
@@ -168,50 +164,46 @@ export const verifyOtpUpdateMobile = async (req: CustomerAuthRequest, res: Respo
 
     delete otpStore[formattedMobile];
 
-     if (mode === "update-mobile") {
-       if (!req.user?.id) {
-         return res.status(401).json({
-           message: "Not authorized",
-         });
-       }
+    if (mode === "update-mobile") {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          message: "Not authorized",
+        });
+      }
 
-       // Check if mobile already exists for another user
-       const exists = await Customer.findOne({
-         mobile: formattedMobile,
-         _id: { $ne: req.user.id },
-       });
+      // Check if mobile already exists for another user
+      const exists = await Customer.findOne({
+        mobile: formattedMobile,
+        _id: { $ne: req.user.id },
+      });
 
-       if (exists) {
-         return res.status(400).json({
-           message: "Mobile already registered with another account",
-         });
-       }
+      if (exists) {
+        return res.status(400).json({
+          message: "Mobile already registered with another account",
+        });
+      }
 
-       // Update SAME customer (no new customer creation)
-       const updatedCustomer = await Customer.findByIdAndUpdate(
-         req.user.id,
-         { mobile: formattedMobile },
-         { new: true },
-       ).populate("wishlist");
-       
-res.clearCookie("token", {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  domain:
-    process.env.NODE_ENV === "production"
-      ? ".ganpatirudraakshaam.com"
-      : undefined,
-  path: "/",
-});
+      // Update SAME customer (no new customer creation)
+      const updatedCustomer = await Customer.findByIdAndUpdate(
+        req.user.id,
+        { mobile: formattedMobile },
+        { new: true },
+      ).populate("wishlist");
 
-       return res.status(200).json({
-         success: true,
-         message: "Mobile updated successfully. Please login again.",
-         forceLogout: true,
-         customer: updatedCustomer,
-       });
-     }
+      res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",      
+        path: "/",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Mobile updated successfully. Please login again.",
+        forceLogout: true,
+        customer: updatedCustomer,
+      });
+    }
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -220,7 +212,10 @@ res.clearCookie("token", {
   }
 };
 
-export const checkMobileExists = async (req: CustomerAuthRequest, res: Response) => {
+export const checkMobileExists = async (
+  req: CustomerAuthRequest,
+  res: Response,
+) => {
   try {
     let { mobile } = req.query;
 
@@ -482,17 +477,19 @@ export const getme = async (req: CustomerAuthRequest, res: Response) => {
   if (modified) {
     await customer.save();
   }
-res.set("Cache-Control", "no-store"); 
+  res.set("Cache-Control", "no-store");
   res.json(customer);
 };
 
 export const logoutCustomer = (req: Request, res: Response) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/", // keep this
-  }).json({ success: true });
+  res
+    .clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/", // keep this
+    })
+    .json({ success: true });
 };
 
 // ADD TO CART
