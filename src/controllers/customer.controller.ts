@@ -125,15 +125,17 @@ export const verifyOtp = async (req: Request, res: Response) => {
          return res.status(403).json({ message: "Account disabled" });
        }
        const token = generateToken(customer._id.toString(), "customer");
-       res
-         .cookie("token", token, {
-           httpOnly: true,
-           secure: true,
-           sameSite: "none",           
-           domain: ".ganpatirudraakshaam.com",
-           maxAge: 60 * 24 * 60 * 60 * 1000,
-         })
-         .json({
+       res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  domain:
+    process.env.NODE_ENV === "production"
+      ? ".ganpatirudraakshaam.com"
+      : undefined,
+  path: "/",
+  maxAge: 60 * 24 * 60 * 60 * 1000,
+}).json({
            success: true,
            isNewUser,
            message: isNewUser ? "Signup successful" : "Login successful",
@@ -191,13 +193,17 @@ export const verifyOtpUpdateMobile = async (req: CustomerAuthRequest, res: Respo
          { mobile: formattedMobile },
          { new: true },
        ).populate("wishlist");
-
-       res.clearCookie("token", {
-         httpOnly: true,
-         secure: true,
-         sameSite: "none",         
-         domain: ".ganpatirudraakshaam.com",
-       });
+       
+res.clearCookie("token", {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  domain:
+    process.env.NODE_ENV === "production"
+      ? ".ganpatirudraakshaam.com"
+      : undefined,
+  path: "/",
+});
 
        return res.status(200).json({
          success: true,
