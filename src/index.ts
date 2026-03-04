@@ -42,8 +42,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "http://localhost:5173",
-      "http://10.165.218.213",
+      "http://localhost:5173",      
       "https://ganpatirudraakshaam.com",
       "https://www.ganpatirudraakshaam.com",
       "https://reboots.ganpatirudraakshaam.com",
