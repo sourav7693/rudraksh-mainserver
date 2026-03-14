@@ -46,45 +46,47 @@ export const createShiprocketOrder = async (
     throw new Error("Shiprocket warehouse ID missing in pickup");
   }
 
-  const payload = {
-    order_id: order.orderId,
-    order_date: new Date().toISOString().split("T")[0],
-    pickup_location: pickup.pickup_location,
+ const payload = {
+   order_id: order.orderId,
+   order_date: new Date().toISOString().split("T")[0],
+   pickup_location: pickup.pickup_location.trim(),
 
-    billing_customer_name:
-      address.name.trim().split(" ")[0] ??
-      order.customer.name.trim().split(" ")[0],
-    billing_last_name:
-      address.name.trim().split(" ")[1] ??
-      order.customer.name.trim().split(" ")[1],
-    billing_address: `${address.area}${
-      address.landmark ? ", " + address.landmark : ""
-    }`,
-    billing_pincode: Number(address.pin),
-    billing_city: address.city,
-    billing_state: address.state,
-    billing_phone: address.mobile,
+   billing_customer_name: address.name.split(" ")[0]
+     ? address.name.split(" ")[0].trim()
+     : "Rudraksh",
+   billing_last_name: address.name.split(" ")[1]
+     ? address.name.split(" ")[1].trim()
+     : "Rudraksh",
 
-    shipping_is_billing: true,
+   billing_address: `${address.area}, ${address.landmark || ""}`,
+   billing_pincode: Number(address.pin),
+   billing_city: address.city,
+   billing_state: address.state
+     .toLowerCase()
+     .replace(/\b\w/g, (c) => c.toUpperCase()),
+   billing_phone: address.mobile,
 
-    /* ✅ SINGLE PRODUCT */
-    order_items: [
-      {
-        name: product.name,
-        sku: product.productId,
-        units: product.quantity,
-        selling_price: product.price,
-      },
-    ],
+   shipping_is_billing: true,
+   billing_country: "India",
 
-    payment_method: order.paymentStatus === "Paid" ? "Prepaid" : "cod",
-    sub_total: order.paymentStatus === "Paid" ? 0 : order.orderValue,
+   order_items: [
+     {
+       name: product.name,
+       sku: product.productId,
+       units: product.quantity || 1,
+       selling_price: product.price,
+     },
+   ],
 
-    weight: product.weight,
-    length: product.dimensions[0].length,
-    breadth: product.dimensions[0].width,
-    height: product.dimensions[0].height,
-  };
+   payment_method: order.paymentStatus === "Paid" ? "Prepaid" : "COD",
+
+   sub_total: order.orderValue,
+
+   weight: Number(product.weight),
+   length: Number(product.dimensions[0].length),
+   breadth: Number(product.dimensions[0].width),
+   height: Number(product.dimensions[0].height),
+ };
 
      // Get Cheapest Courier
       const courier = await getCheapestCourier({
@@ -93,13 +95,23 @@ export const createShiprocketOrder = async (
         weight: product.weight,
         cod: order.paymentStatus !== "Paid" ? 1 : 0,
       });
-
-   const response = await shiprocketClient.post("/orders/create/adhoc", payload);
+      console.log(pickup.pickup_location.trim());
+let response;
+   try {
+     response = await shiprocketClient.post(
+       "/orders/create/adhoc",
+       payload,
+     );
+   } catch (err: any) {
+     console.log("SHIPROCKET ERROR ↓↓↓");
+     console.log(err.response?.data);
+     throw err;
+   }
   
     const shipment_id = response.data?.shipment_id;
     
     console.log("🚚 Shiprocket push-order:", response.data);
-
+   console.log(JSON.stringify(response.data, null, 2));
     if (!shipment_id) {
       throw new Error("Shipment ID not generated");
     }

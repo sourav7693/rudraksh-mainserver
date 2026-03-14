@@ -72,10 +72,10 @@ export const loginUser = async (req: Request, res: Response) => {
   res
     .cookie("admin_token", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: false,
+      sameSite: "lax",
       maxAge: SIXTY_DAYS,
-      domain: ".ganpatirudraakshaam.com",
+      // domain: ".ganpatirudraakshaam.com",
     })
     .json({
       success: true,
@@ -255,6 +255,24 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const user = await User.findOne({ userId: id });
   if (!user) return res.status(404).json({ message: "User not found" });
+
+   if (
+     typeof req.body.status === "boolean" &&
+     req.body.status === false &&
+     user.role === "admin"
+   ) {
+     const adminCount = await User.countDocuments({
+       role: "admin",
+       status: true,
+     });
+
+     if (adminCount <= 1) {
+       return res.status(400).json({
+         message: "Cannot disable the only active admin user.",
+       });
+     }
+   }
+
   if (req.body?.username) user.username = req.body.username;
   if (req.body?.email) user.email = req.body.email;
   if (req.body?.mobile) user.mobile = req.body.mobile;
@@ -278,8 +296,23 @@ export const deleteUser = async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = await User.findOne({ userId: id });
   if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.role === "admin") {
+      const adminCount = await User.countDocuments({
+        role: "admin",
+        status: true,
+      });
+
+      if (adminCount <= 1) {
+        return res.status(403).json({
+          status: false,
+          message: "Cannot delete the only active admin user.",
+        });
+      }
+    }
+
   await User.findOneAndDelete({ userId: id });
-  res.json({ message: "User deleted" });
+  res.json({ status : true, message: "User deleted" });
 };
 
 export const me = async (req: AuthRequest, res: Response) => {

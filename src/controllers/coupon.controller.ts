@@ -46,13 +46,33 @@ export const createCoupon = async (req: Request, res: Response) => {
 // GET ALL COUPONS (Paginated + Search)
 export const getCoupons = async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 10, search = "", min, expire } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      min,
+      expire,
+      status,
+    } = req.query;
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const query: any = search
-      ? { code: { $regex: search as string, $options: "i" } }
-      : {};
+    const query : any = {};
+
+    if (search) {
+      query.$or = [
+        { code: { $regex: search as string, $options: "i" } },
+        { name: { $regex: search as string, $options: "i" } },
+      ];
+    }
+
+      if (status === "Active") {
+        query.status = true;
+      }
+
+      if (status === "Inactive") {
+        query.status = false;
+      }
 
     if (min) {
       query.minOrderAmount = { $lte: Number(min) };

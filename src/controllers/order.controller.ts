@@ -602,7 +602,10 @@ export const updateOrder = async (req: Request, res: Response) => {
 
     // 🚀 Shipmozo flow ONLY on Processing → Confirm
     if (status === "Confirmed") {
-      const {shiprocket, courier} = await createShiprocketOrder(order, resolvedAddress);
+      const { shiprocket, courier } = await createShiprocketOrder(
+        order,
+        resolvedAddress,
+      );
 
       console.log(shiprocket);
 
@@ -610,11 +613,17 @@ export const updateOrder = async (req: Request, res: Response) => {
         shiprocketOrderId: shiprocket.order_id,
       };
 
-       const awbRes = await assignAwbToShipment({
-            shipment_id : shiprocket.shipment_id,
-            courier_id: courier.courier_id,
-          });
-          const awbData = awbRes.awb_details.response.data;
+      const awbRes = await assignAwbToShipment({
+        shipment_id: shiprocket.shipment_id,
+        courier_id: courier.courier_id,
+      });
+      console.log("AWB RESPONSE", JSON.stringify(awbRes, null, 2));
+
+      const awbData = awbRes?.response?.data;
+
+      if (!awbData?.awb_code) {
+        throw new Error("AWB not generated");
+      }
 
       order.shipping = {
         ...order.shipping,
@@ -672,8 +681,17 @@ export const updateOrder = async (req: Request, res: Response) => {
 
     res.json({ success: true, order });
   } catch (error: any) {
-    console.log(error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error(error);
+
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Internal Server Error";
+
+    return res.status(500).json({
+      success: false,
+      message,
+    });
   }
 };
 

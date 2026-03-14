@@ -96,6 +96,13 @@ export const verifyOtp = async (req: Request, res: Response) => {
     }).populate("wishlist");
     let isNewUser = false;
 
+    if (customer && !customer.status) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is currently disabled. Please contact support.",
+      });
+    }
+
     if (!customer) {
       isNewUser = true;
 
@@ -328,9 +335,9 @@ export const updateCustomer = async (req: Request, res: Response) => {
     if (req.body.email) {
       updated.email = req.body.email;
     }
-    if (req.body.status) {
-      updated.status = req.body.status;
-    }
+  if (req.body.status !== undefined) {
+    updated.status = req.body.status;
+  }
     if (req.body.gender) {
       updated.gender = req.body.gender;
     }

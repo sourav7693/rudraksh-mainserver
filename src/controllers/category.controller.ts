@@ -242,6 +242,16 @@ export const getCategories = async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = req.query.limit ? Number(req.query.limit) : 10;
     const search = req.query.search ? String(req.query.search) : "";
+    const status = req.query.status ? String(req.query.status) : "";
+    const query: any = {};
+
+      if (status === "Active") {
+        query.status = true;
+      }
+
+      if (status === "Inactive") {
+        query.status = false;
+      }
    
     const sort = req.query.sort ? String(req.query.sort) : "desc";
     const sortOrder = sort === "asc" ? 1 : -1;
@@ -249,7 +259,7 @@ export const getCategories = async (req: Request, res: Response) => {
     const regex = new RegExp(search, "i"); // Case-insensitive search
 
     // Fetch all categories (fast on indexed db)
-     const allCategories = await Category.find()
+     const allCategories = await Category.find(query)
       .sort({ createdAt: sortOrder })
       .lean<CategoryDoc[]>();
 
@@ -325,7 +335,7 @@ const updateNestedChildrenById = async(
 export const updateCategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, childId, newChildName } = req.body;
+    const { name, childId, newChildName, status } = req.body;
 
     const category = await Category.findOne({ categoryId: id });
     if (!category) {
@@ -351,6 +361,9 @@ export const updateCategory = async (req: Request, res: Response) => {
     // ---- Update main category if no childId ----
     if (!childId) {
       if (name) category.name = name;
+      if (typeof status === "boolean") {
+        category.status = status;
+      }
 
       if (uploadedImage) {
         // Delete old main category image
